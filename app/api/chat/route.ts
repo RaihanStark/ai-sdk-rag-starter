@@ -1,8 +1,7 @@
-import { createResource } from '@/lib/actions/resources';
 import { openai } from '@ai-sdk/openai';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
-import { findRelevantContent } from '@/lib/ai/embedding';
+import { searchInventory } from '@/lib/actions/inventory';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -12,19 +11,39 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: openai('gpt-4o'),
-    system: `You are a helpful assistant. Check your knowledge base before answering any questions.
-    Only respond to questions using information from tool calls (required getInformation tool call).
-    if no relevant information is found in the tool calls, respond, "Sorry, I don't know.". Tools are: getInformation.`,
+    system: `You are a helpful food inventory assistant. You have access to a food inventory database.
+
+When users ask questions about food items, prices, or inventory:
+1. ALWAYS use the getInventoryInfo tool to search for relevant items
+2. Provide detailed information including names, descriptions, and prices
+3. If asking about price comparisons, show multiple options
+4. For recipe suggestions, find relevant ingredients with prices
+5. If no relevant items found, suggest similar alternatives or say you don't have that item
+
+Be conversational and helpful. Always include prices when discussing items.`,
     messages,
     tools: {
-      getInformation: tool({
-        description: `get information from the knowledge base.`,
+      getInventoryInfo: tool({
+        description: `Search the food inventory database for items, prices, and information. Use this for any food-related questions.`,
         parameters: z.object({
-          question: z.string().describe('the question to search the knowledge base'),
+          query: z.string().describe('search query for food items, ingredients, or categories'),
         }),
-        execute: async ({ question }) => findRelevantContent(question),
+        execute: async ({ query }) => {
+          const results = await searchInventory(query);
+          
+          if (results.length === 0) {
+            return `No matching items found for "${query}". Try searching for other food items, ingredients, or categories.`;
+          }
+
+          const formattedResults = results.map(item => 
+            `• ${item.name} - ${item.priceFormatted}\n  ${item.description}`
+          ).join('\n\n');
+
+          return `Found ${results.length} relevant items for "${query}":\n\n${formattedResults}`;
+        },
       }),
     },
+    maxSteps: 3,
   });
 
   return result.toDataStreamResponse();
