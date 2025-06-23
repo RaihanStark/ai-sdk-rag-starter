@@ -74,3 +74,30 @@ export async function getInventoryById(id: string) {
     return null;
   }
 }
+
+export async function getPriceRanking(
+  type: 'highest' | 'lowest' = 'highest', 
+  limit: number = 5
+) {
+  try {
+    const orderByDirection = type === 'highest' ? desc(inventory.price) : inventory.price;
+    
+    const items = await db
+      .select()
+      .from(inventory)
+      .orderBy(orderByDirection)
+      .limit(limit);
+
+    return items.map((item, index) => ({
+      rank: index + 1,
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      priceFormatted: `$${(item.price / 100).toFixed(2)}`,
+      description: item.description
+    }));
+  } catch (error) {
+    console.error("Error getting price ranking:", error);
+    return [];
+  }
+}
