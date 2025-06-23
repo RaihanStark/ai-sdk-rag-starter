@@ -1,4 +1,4 @@
-import { seedInventory, clearInventory, seedRandomInventory } from "@/lib/db/seed/inventory";
+import { seedInventory, clearInventory } from "@/lib/db/seed/inventory";
 
 async function main() {
   const args = process.argv.slice(2);
