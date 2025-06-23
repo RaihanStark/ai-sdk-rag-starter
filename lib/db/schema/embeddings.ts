@@ -1,6 +1,6 @@
 import { nanoid } from '@/lib/utils';
 import { index, pgTable, text, varchar, vector } from 'drizzle-orm/pg-core';
-import { resources } from './resources';
+import { inventory } from './inventory';
 
 export const embeddings = pgTable(
   'embeddings',
@@ -8,8 +8,8 @@ export const embeddings = pgTable(
     id: varchar('id', { length: 191 })
       .primaryKey()
       .$defaultFn(() => nanoid()),
-    resourceId: varchar('resource_id', { length: 191 }).references(
-      () => resources.id,
+    inventoryId: varchar('inventory_id', { length: 191 }).references(
+      () => inventory.id,
       { onDelete: 'cascade' },
     ),
     content: text('content').notNull(),

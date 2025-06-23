@@ -13,7 +13,15 @@
     "db:pull": "drizzle-kit introspect",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:check": "drizzle-kit check"
+    "db:check": "drizzle-kit check",
+    "seed:inventory": "tsx scripts/seed-inventory.ts",
+    "seed:inventory:clear": "tsx scripts/seed-inventory.ts clear",
+    "seed:inventory:random": "tsx scripts/seed-inventory.ts random",
+    "seed:inventory:reset": "tsx scripts/seed-inventory.ts reset",
+    "sync:vectors": "tsx scripts/sync-inventory-vectors.ts",
+    "sync:vectors:clear": "tsx scripts/sync-inventory-vectors.ts clear",
+    "sync:vectors:vectorize": "tsx scripts/sync-inventory-vectors.ts vectorize",
+    "sync:vectors:status": "tsx scripts/sync-inventory-vectors.ts status"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",
