@@ -3,6 +3,7 @@ import { inventory } from "@/lib/db/schema/inventory";
 import { embeddings } from "@/lib/db/schema/embeddings";
 import { generateEmbedding } from "@/lib/ai/embedding";
 import { cosineDistance, desc, gt, sql, eq } from "drizzle-orm";
+import { nanoid } from "@/lib/utils";
 
 export async function searchInventory(query: string) {
   try {
@@ -99,5 +100,140 @@ export async function getPriceRanking(
   } catch (error) {
     console.error("Error getting price ranking:", error);
     return [];
+  }
+}
+
+// CRUD Operations with automatic embedding sync
+
+export async function createInventoryItem(data: {
+  name: string;
+  price: number;
+  description: string;
+}) {
+  try {
+    // Create inventory item
+    const [newItem] = await db
+      .insert(inventory)
+      .values({
+        id: nanoid(),
+        name: data.name,
+        price: data.price,
+        description: data.description,
+      })
+      .returning();
+
+    // Generate and store embedding
+    const content = `${newItem.name}: ${newItem.description}. Price: $${(newItem.price / 100).toFixed(2)}`;
+    const embedding = await generateEmbedding(content);
+    
+    await db.insert(embeddings).values({
+      id: nanoid(),
+      inventoryId: newItem.id,
+      content,
+      embedding,
+    });
+
+    return {
+      success: true,
+      item: {
+        ...newItem,
+        priceFormatted: `$${(newItem.price / 100).toFixed(2)}`
+      }
+    };
+  } catch (error) {
+    console.error("Error creating inventory item:", error);
+    return {
+      success: false,
+      error: "Failed to create inventory item"
+    };
+  }
+}
+
+export async function updateInventoryItem(
+  id: string,
+  data: {
+    name?: string;
+    price?: number;
+    description?: string;
+  }
+) {
+  try {
+    // Update inventory item
+    const [updatedItem] = await db
+      .update(inventory)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(inventory.id, id))
+      .returning();
+
+    if (!updatedItem) {
+      return {
+        success: false,
+        error: "Item not found"
+      };
+    }
+
+    // Update embedding
+    const content = `${updatedItem.name}: ${updatedItem.description}. Price: $${(updatedItem.price / 100).toFixed(2)}`;
+    const embedding = await generateEmbedding(content);
+    
+    // Delete old embedding
+    await db.delete(embeddings).where(eq(embeddings.inventoryId, id));
+    
+    // Insert new embedding
+    await db.insert(embeddings).values({
+      id: nanoid(),
+      inventoryId: updatedItem.id,
+      content,
+      embedding,
+    });
+
+    return {
+      success: true,
+      item: {
+        ...updatedItem,
+        priceFormatted: `$${(updatedItem.price / 100).toFixed(2)}`
+      }
+    };
+  } catch (error) {
+    console.error("Error updating inventory item:", error);
+    return {
+      success: false,
+      error: "Failed to update inventory item"
+    };
+  }
+}
+
+export async function deleteInventoryItem(id: string) {
+  try {
+    // Get item details before deletion
+    const item = await getInventoryById(id);
+    
+    if (!item) {
+      return {
+        success: false,
+        error: "Item not found"
+      };
+    }
+
+    // Delete embeddings first (due to foreign key constraint)
+    await db.delete(embeddings).where(eq(embeddings.inventoryId, id));
+    
+    // Delete inventory item
+    await db.delete(inventory).where(eq(inventory.id, id));
+
+    return {
+      success: true,
+      message: `Deleted item: ${item.name}`,
+      deletedItem: item
+    };
+  } catch (error) {
+    console.error("Error deleting inventory item:", error);
+    return {
+      success: false,
+      error: "Failed to delete inventory item"
+    };
   }
 }
