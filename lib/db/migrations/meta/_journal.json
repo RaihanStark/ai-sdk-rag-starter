@@ -15,6 +15,20 @@
       "when": 1750655276570,
       "tag": "0001_famous_starjammers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1750750054599,
+      "tag": "0002_blue_unicorn",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1750753007448,
+      "tag": "0003_massive_quicksilver",
+      "breakpoints": true
     }
   ]
 }
